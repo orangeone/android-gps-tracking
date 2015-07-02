@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">IspDemo</string>
+    <string name="action_settings">Settings</string>
+    <string name="string_rest">静止</string>
+    <string name="string_stop">停止</string>
+    <string name="string_walk">歩行</string>
+    <string name="string_run">走行</string>
+    <string name="string_maybe_vehicle">乗り物かも</string>
+    <string name="string_vehicle">乗り物</string>
+    <string name="string_start_button">開始</string>
+    <string name="string_stop_button">停止</string>
+    <string name="string_remove_button">消去</string>
+</resources>
