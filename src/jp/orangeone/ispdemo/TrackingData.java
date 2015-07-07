@@ -1,5 +1,6 @@
 package jp.orangeone.ispdemo;
 
+import java.text.DecimalFormat;
 import java.util.Date;
 
 import jp.co.isp21.Presence.PresenceManagerUtil;
@@ -76,6 +77,9 @@ public class TrackingData {
 	}
 
 	public String toSub() {
-		return DateTimes.datetimeFormat().format(date) + " (" + this.latitude + ", " + this.longitude + ") " + IspHelper.getStateText(state) + " - " + distance + " - " + speed;
+		DecimalFormat df = new DecimalFormat("#.###");
+		return DateTimes.datetimeFormat().format(date) + ' ' + IspHelper.getStateText(state)
+				+ "\n(" + df.format(latitude) + ", " + df.format(longitude) + ") " 
+				+ " - " + df.format(distance) + "m - " + df.format(speed) + "m/s";
 	}
 }

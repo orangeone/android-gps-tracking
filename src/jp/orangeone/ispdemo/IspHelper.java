@@ -6,17 +6,21 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
+import java.util.Map.Entry;
 import jp.co.isp21.Presence.PresenceManagerUtil;
-
+import android.annotation.SuppressLint;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Environment;
-
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import panda.bind.json.Jsons;
 import panda.io.FileNames;
 import panda.io.Files;
@@ -34,33 +38,24 @@ public class IspHelper {
 	
 	private static List<TrackingData> trackings = new ArrayList<TrackingData>();
 	
-	private static class State implements Comparable<State> {
-		int state;
-		int count;
-		
-		State(int state) {
-			this.state = state;
-		}
-
-		@Override
-		public int compareTo(State a) {
-			return this.count - a.count;
-		}
-	}
-
-	private static List<State> states = new ArrayList<State>();
+	@SuppressLint("UseSparseArrays")
+	private static Map<Integer, Long> states = new HashMap<Integer, Long>();
+	private static int lastState;
+	private static long lastStart;
 
 	public static List<TrackingData> getTrackings() {
 		return trackings;
 	}
 	
-	public static String getTrackingFile() {
-		String fn = "ispdemo/ispdemo." + DateTimes.dateLogFormat().format(DateTimes.getDate()) + ".txt";
+	public static String getTrackingFile(Calendar c) {
+		String fn = "ispdemo/ispdemo." + DateTimes.dateLogFormat().format(c) + ".txt";
 		return FileNames.concat(Environment.getExternalStorageDirectory().getAbsolutePath(), fn);
 	}
 
-	public static void loadTrackings() {
-		File file = new File(getTrackingFile());
+	public static void loadTrackings(Calendar c) {
+		trackings.clear();
+
+		File file = new File(getTrackingFile(c));
 		if (!file.exists()) {
 			log.warn(file + "does not exist");
 			return;
@@ -69,7 +64,6 @@ public class IspHelper {
 		log.info("Loading " + file);
 
 		float[] results = new float[1];
-		trackings.clear();
 		LineIterator li = null;
 		try {
 			li = Files.lineIterator(file);
@@ -123,7 +117,7 @@ public class IspHelper {
 				location.getLongitude(), results);
 			
 			distance = results[0];
-			if (distance < 10) {
+			if (distance < 30) {
 				log.debug("SKIP SAME " + location + ": " + distance);
 				return false;
 			}
@@ -187,7 +181,7 @@ public class IspHelper {
 		try {
 			log.info("ADD: " + s);
 
-			File file = new File(getTrackingFile());
+			File file = new File(getTrackingFile(Calendar.getInstance()));
 			r = new OutputStreamWriter(new FileOutputStream(file, true), Charsets.UTF_8);
 			r.append(s);
 			r.append(Streams.LINE_SEPARATOR);
@@ -205,11 +199,25 @@ public class IspHelper {
 			return PresenceManagerUtil.PRESENCE_STATE_STOP;
 		}
 		
-		Collections.sort(states);
+		long max = 0;
+		for (Long time : states.values()) {
+			if (time > max) {
+				max = time;
+			}
+		}
 		
-		int state = states.get(states.size() - 1).state;
-
+		int state = PresenceManagerUtil.PRESENCE_STATE_STOP;
+		for (Entry<Integer, Long> en : states.entrySet()) {
+			if (max == en.getValue()) {
+				state = en.getKey();
+				break;
+			}
+		}
+		
 		states.clear();
+
+		states.put(lastState, 0L);
+		lastStart = System.currentTimeMillis();
 		
 		return state;
 	}
@@ -218,18 +226,24 @@ public class IspHelper {
 		log.debug("ADD state: " + getStateText(state));
 
 		if (Collections.isEmpty(states)) {
-			states.add(new State(state));
+			states.put(state, 0L);
+			lastState = state;
+			lastStart = System.currentTimeMillis();
 			return;
 		}
 
-		for (State s : states) {
-			if (s.state == state) {
-				s.count++;
-				return;
-			}
+		Long ltime = states.get(lastState);
+		if (ltime != null) {
+			ltime += (System.currentTimeMillis() - lastStart);
+			states.put(lastState, ltime);
 		}
 		
-		states.add(new State(state));
+		lastState = state;
+		lastStart = System.currentTimeMillis();
+		
+		if (!states.containsKey(state)) {
+			states.put(state, 0L);
+		}
 	}
 
 	public static String toAddress(Address a) {
@@ -298,4 +312,22 @@ public class IspHelper {
 			return Color.WHITE;
 		}
 	}
+	
+	public static BitmapDescriptor getStateIcon(int status) {
+		switch (status) {
+		case PresenceManagerUtil.PRESENCE_STATE_REST:
+			return BitmapDescriptorFactory.fromResource(R.drawable.rest);
+		case PresenceManagerUtil.PRESENCE_STATE_STOP:
+			return BitmapDescriptorFactory.fromResource(R.drawable.stop);
+		case PresenceManagerUtil.PRESENCE_STATE_WALK:
+			return BitmapDescriptorFactory.fromResource(R.drawable.walk);
+		case PresenceManagerUtil.PRESENCE_STATE_RUN:
+			return BitmapDescriptorFactory.fromResource(R.drawable.run);
+		case PresenceManagerUtil.PRESENCE_STATE_VEHICLE:
+			return BitmapDescriptorFactory.fromResource(R.drawable.vehicle);
+		default:
+			return BitmapDescriptorFactory.fromResource(R.drawable.stop);
+		}
+	}
+	
 }
