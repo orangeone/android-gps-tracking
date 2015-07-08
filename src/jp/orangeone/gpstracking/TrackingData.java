@@ -1,4 +1,4 @@
-package jp.orangeone.ispdemo;
+package jp.orangeone.gpstracking;
 
 import java.text.DecimalFormat;
 import java.util.Date;
@@ -78,7 +78,7 @@ public class TrackingData {
 
 	public String toSub() {
 		DecimalFormat df = new DecimalFormat("#.###");
-		return DateTimes.datetimeFormat().format(date) + ' ' + IspHelper.getStateText(state)
+		return DateTimes.datetimeFormat().format(date) + ' ' + GPSHelper.getStateText(state)
 				+ "\n(" + df.format(latitude) + ", " + df.format(longitude) + ") " 
 				+ " - " + df.format(distance) + "m - " + df.format(speed) + "m/s";
 	}

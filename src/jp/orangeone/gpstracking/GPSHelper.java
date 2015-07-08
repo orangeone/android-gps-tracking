@@ -1,4 +1,4 @@
-package jp.orangeone.ispdemo;
+package jp.orangeone.gpstracking;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -7,20 +7,26 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import jp.co.isp21.Presence.PresenceManagerUtil;
+
 import android.annotation.SuppressLint;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Environment;
+
+import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+
 import panda.bind.json.Jsons;
 import panda.io.FileNames;
 import panda.io.Files;
@@ -33,11 +39,11 @@ import panda.lang.time.DateTimes;
 import panda.log.Log;
 import panda.log.Logs;
 
-public class IspHelper {
-	private static final Log log = Logs.getLog(IspHelper.class);
-	
+public class GPSHelper {
+	private static final Log log = Logs.getLog(GPSHelper.class);
+
 	private static List<TrackingData> trackings = new ArrayList<TrackingData>();
-	
+
 	@SuppressLint("UseSparseArrays")
 	private static Map<Integer, Long> states = new HashMap<Integer, Long>();
 	private static int lastState;
@@ -46,13 +52,39 @@ public class IspHelper {
 	public static List<TrackingData> getTrackings() {
 		return trackings;
 	}
-	
+
 	public static String getTrackingFile(Calendar c) {
-		String fn = "ispdemo/ispdemo." + DateTimes.dateLogFormat().format(c) + ".txt";
+		String fn = GPSHelper.class.getPackage().getName() + "/gpstracking." + DateTimes.dateLogFormat().format(c)
+				+ ".txt";
 		return FileNames.concat(Environment.getExternalStorageDirectory().getAbsolutePath(), fn);
 	}
 
+	public static void backward() {
+		try {
+			File od = new File(FileNames.concat(Environment.getExternalStorageDirectory().getAbsolutePath(), "ispdemo"));
+			File nd = new File(FileNames.concat(Environment.getExternalStorageDirectory().getAbsolutePath(),
+				GPSHelper.class.getPackage().getName()));
+			if (Files.isDirectory(od)) {
+				Collection<File> fs = Files.listFiles(od, "txt");
+				if (Collections.isNotEmpty(fs)) {
+					Files.makeDirs(nd);
+					for (File f : fs) {
+						String nn = Strings.replace(f.getAbsolutePath(), "/ispdemo/ispdemo.", "/"
+								+ GPSHelper.class.getPackage().getName() + "/gpstracking.");
+						log.debug("move " + f.getAbsolutePath() + " -> " + nn);
+						Files.moveFile(f, new File(nn));
+					}
+				}
+			}
+		}
+		catch (IOException e) {
+			log.warn("backward error", e);
+		}
+	}
+
 	public static void loadTrackings(Calendar c) {
+		backward();
+
 		trackings.clear();
 
 		File file = new File(getTrackingFile(c));
@@ -60,7 +92,7 @@ public class IspHelper {
 			log.warn(file + "does not exist");
 			return;
 		}
-		
+
 		log.info("Loading " + file);
 
 		float[] results = new float[1];
@@ -76,7 +108,8 @@ public class IspHelper {
 				TrackingData td = Jsons.fromJson(line, TrackingData.class);
 				TrackingData ltd = getLastLocation();
 				if (ltd != null) {
-					Location.distanceBetween(ltd.getLatitude(), ltd.getLongitude(), td.getLatitude(), td.getLongitude(), results);
+					Location.distanceBetween(ltd.getLatitude(), ltd.getLongitude(), td.getLatitude(),
+						td.getLongitude(), results);
 					td.setDistance(results[0]);
 					td.setSpeed(td.getDistance() / DateTimes.subSeconds(td.getDate(), ltd.getDate()));
 				}
@@ -90,7 +123,7 @@ public class IspHelper {
 			Streams.safeClose(li);
 		}
 	}
-	
+
 	public static TrackingData getLastLocation() {
 		if (Collections.isNotEmpty(trackings)) {
 			return trackings.get(trackings.size() - 1);
@@ -115,7 +148,7 @@ public class IspHelper {
 			float[] results = new float[1];
 			Location.distanceBetween(ltd.getLatitude(), ltd.getLongitude(), location.getLatitude(),
 				location.getLongitude(), results);
-			
+
 			distance = results[0];
 			if (distance < 30) {
 				log.debug("SKIP SAME " + location + ": " + distance);
@@ -142,18 +175,18 @@ public class IspHelper {
 				address = toAddress(a);
 			}
 
-//			if (ltd != null && Strings.isNotEmpty(address)) {
-//				if (ltd.getAddress().equals(address)) {
-//					log.debug("Skip (" + location + "): " + address);
-//					return;
-//				}
-//			}
+			// if (ltd != null && Strings.isNotEmpty(address)) {
+			// if (ltd.getAddress().equals(address)) {
+			// log.debug("Skip (" + location + "): " + address);
+			// return;
+			// }
+			// }
 		}
 		catch (Exception e) {
 			// Catch network or other I/O problems.
 			log.error("Failed to get address of (" + location.getLatitude() + ", " + location.getLongitude(), e);
 		}
-		
+
 		TrackingData td = new TrackingData();
 		td.setDate(new Date(location.getTime()));
 		td.setState(getBestState());
@@ -163,17 +196,18 @@ public class IspHelper {
 
 		if (ltd != null) {
 			float[] results = new float[1];
-			Location.distanceBetween(ltd.getLatitude(), ltd.getLongitude(), td.getLatitude(), td.getLongitude(), results);
+			Location.distanceBetween(ltd.getLatitude(), ltd.getLongitude(), td.getLatitude(), td.getLongitude(),
+				results);
 			td.setDistance(results[0]);
 			td.setSpeed(td.getDistance() / DateTimes.subSeconds(td.getDate(), ltd.getDate()));
 		}
 
 		trackings.add(td);
 		saveTrackingData(td);
-		
+
 		return true;
 	}
-	
+
 	private static void saveTrackingData(TrackingData td) {
 		String s = Jsons.toJson(td);
 
@@ -198,14 +232,14 @@ public class IspHelper {
 		if (Collections.isEmpty(states)) {
 			return PresenceManagerUtil.PRESENCE_STATE_STOP;
 		}
-		
+
 		long max = 0;
 		for (Long time : states.values()) {
 			if (time > max) {
 				max = time;
 			}
 		}
-		
+
 		int state = PresenceManagerUtil.PRESENCE_STATE_STOP;
 		for (Entry<Integer, Long> en : states.entrySet()) {
 			if (max == en.getValue()) {
@@ -213,15 +247,15 @@ public class IspHelper {
 				break;
 			}
 		}
-		
+
 		states.clear();
 
 		states.put(lastState, 0L);
 		lastStart = System.currentTimeMillis();
-		
+
 		return state;
 	}
-	
+
 	public static void setState(int state) {
 		log.debug("ADD state: " + getStateText(state));
 
@@ -237,10 +271,10 @@ public class IspHelper {
 			ltime += (System.currentTimeMillis() - lastStart);
 			states.put(lastState, ltime);
 		}
-		
+
 		lastState = state;
 		lastStart = System.currentTimeMillis();
-		
+
 		if (!states.containsKey(state)) {
 			states.put(state, 0L);
 		}
@@ -312,7 +346,7 @@ public class IspHelper {
 			return Color.WHITE;
 		}
 	}
-	
+
 	public static BitmapDescriptor getStateIcon(int status) {
 		switch (status) {
 		case PresenceManagerUtil.PRESENCE_STATE_REST:
@@ -329,5 +363,30 @@ public class IspHelper {
 			return BitmapDescriptorFactory.fromResource(R.drawable.stop);
 		}
 	}
-	
+
+	// http://developer.android.com/training/location/activity-recognition.html
+	/**
+	 * Map detected activity types to strings
+	 * 
+	 * @param activityType The detected activity type
+	 * @return A user-readable name for the type
+	 */
+	public static String getActivityText(int activityType) {
+		switch (activityType) {
+		case DetectedActivity.IN_VEHICLE:
+			return "in_vehicle";
+		case DetectedActivity.ON_BICYCLE:
+			return "on_bicycle";
+		case DetectedActivity.ON_FOOT:
+			return "on_foot";
+		case DetectedActivity.STILL:
+			return "still";
+		case DetectedActivity.UNKNOWN:
+			return "unknown";
+		case DetectedActivity.TILTING:
+			return "tilting";
+		default:
+			return "unknown(" + activityType + ")";
+		}
+	}
 }

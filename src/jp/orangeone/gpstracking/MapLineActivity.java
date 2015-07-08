@@ -1,4 +1,4 @@
-package jp.orangeone.ispdemo;
+package jp.orangeone.gpstracking;
 
 import java.util.List;
 
@@ -10,8 +10,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMap.OnMapLoadedCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -19,8 +17,8 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import panda.log.Log;
 import panda.log.Logs;
 
-public class MapCircleActivity extends FragmentActivity {
-	private static final Log log = Logs.getLog(MapCircleActivity.class);
+public class MapLineActivity extends FragmentActivity {
+	private static final Log log = Logs.getLog(MapLineActivity.class);
 	
 	private GoogleMap googleMap;
 	private Handler mainHandler;
@@ -40,7 +38,7 @@ public class MapCircleActivity extends FragmentActivity {
 			if (googleMap != null) {
 				mainHandler = new Handler(getMainLooper());
 				
-				TrackingData td = IspHelper.getFirstLocation();
+				TrackingData td = GPSHelper.getFirstLocation();
 				if (td != null) {
 					moveCamera(td);
 				}
@@ -59,7 +57,7 @@ public class MapCircleActivity extends FragmentActivity {
 		@Override
 		public void run() {
 			try {
-				List<TrackingData> tds = IspHelper.getTrackings();
+				List<TrackingData> tds = GPSHelper.getTrackings();
 				if (index > tds.size() - 2) {
 					return;
 				}
@@ -78,14 +76,24 @@ public class MapCircleActivity extends FragmentActivity {
 		googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 13));
 	}
 	
+//	private void drawLines() {
+//		List<TrackingData> tds = IspHelper.getTrackings();
+//		while (index <= tds.size() - 2) {
+//			drawLine(tds.get(index), tds.get(++index));
+//		}
+//
+//		TrackingData end = IspHelper.getLastLocation();
+//		LatLng lle = new LatLng(end.getLatitude(), end.getLongitude());
+//		googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lle, 13));
+//	}
+
 	private void drawLine(TrackingData start, TrackingData end) {
 		LatLng lls = new LatLng(start.getLatitude(), start.getLongitude());
 		LatLng lle = new LatLng(end.getLatitude(), end.getLongitude());
-		BitmapDescriptor icon = BitmapDescriptorFactory.fromResource(R.drawable.circle);
 
-		log.debug("Draw Circle " + lls + " -> " + lle);
-		googleMap.addPolyline(new PolylineOptions().add(lls, lle).width(5).color(IspHelper.getStateColor(end.getState())).geodesic(true));
-		googleMap.addMarker(new MarkerOptions().position(lls).icon(icon));
+		log.debug("Draw Line " + lls + " -> " + lle);
+		googleMap.addPolyline(new PolylineOptions().add(lls, lle).width(5).color(GPSHelper.getStateColor(end.getState())).geodesic(true));
+		googleMap.addMarker(new MarkerOptions().position(lle).icon(GPSHelper.getStateIcon(end.getState())));
 		googleMap.animateCamera(CameraUpdateFactory.newLatLng(lle));
 	}
 }

@@ -1,4 +1,4 @@
-package jp.orangeone.ispdemo;
+package jp.orangeone.gpstracking;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -17,7 +17,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
@@ -65,7 +64,7 @@ public class MainActivity extends Activity implements OnClickListener {
 				return;
 			}
 
-			IspHelper.addLocation(location, mGeocoder);
+			GPSHelper.addLocation(location, mGeocoder);
 			updateList();
 		}
 
@@ -167,7 +166,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
 		mPresenceManager = PresenceManager.getInstance(getApplicationContext());
 
-		MyAdapter adapter = new MyAdapter(this, IspHelper.getTrackings());
+		MyAdapter adapter = new MyAdapter(this, GPSHelper.getTrackings());
 
 		ListView listView = (ListView)findViewById(R.id.listTracking);
 		listView.setAdapter(adapter);
@@ -191,7 +190,7 @@ public class MainActivity extends Activity implements OnClickListener {
 		mHandler.postDelayed(new Runnable() {
 			@Override
 			public void run() {
-				IspHelper.loadTrackings(mDate);
+				GPSHelper.loadTrackings(mDate);
 				updateList();
 			}
 		}, 100);
@@ -201,7 +200,7 @@ public class MainActivity extends Activity implements OnClickListener {
 		super.onStart();
 	}
 
-	private static BroadcastReceiver mIspReceiver = new IspReceiver();
+	private static BroadcastReceiver mIspReceiver = new PresenceReceiver();
 
 	public void onResume() {
 		super.onResume();
@@ -254,7 +253,7 @@ public class MainActivity extends Activity implements OnClickListener {
 				final TextView txtDate = (TextView)findViewById(R.id.txtDate);
 				txtDate.setText(DateTimes.dateFormat().format(mDate));
 				
-				IspHelper.loadTrackings(mDate);
+				GPSHelper.loadTrackings(mDate);
 				updateList();
 			}
 		}, mDate.get(Calendar.YEAR), mDate.get(Calendar.MONTH), mDate.get(Calendar.DAY_OF_MONTH));
@@ -279,7 +278,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			TextView txtDate = (TextView)findViewById(R.id.txtDate);
 			txtDate.setText(DateTimes.dateFormat().format(mDate));
 
-			IspHelper.loadTrackings(mDate);
+			GPSHelper.loadTrackings(mDate);
 			updateList();
 		}
 
