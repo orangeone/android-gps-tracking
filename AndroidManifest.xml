@@ -31,7 +31,7 @@
         <!-- "hogehoge"は自分で取得したAPIキーに書き換えてください -->
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
-            android:value="AIzaSyBsUpQ3xbUMSMQKfcgUaiJS3ySLKc6xYDM" />
+            android:value="AIzaSyCIB3d3EeykLS6WNVk9bVPcyoBNOis6C7I" />
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
