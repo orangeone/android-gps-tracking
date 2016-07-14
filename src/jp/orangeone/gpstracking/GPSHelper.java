@@ -159,8 +159,8 @@ public class GPSHelper {
 			// less than 30 minutes
 			if (delta < 30 * 60) {
 				speed = distance / delta;
-				// great than 180km/h
-				if (speed >= 50) {
+				// great than 120km/h
+				if (speed >= 33) {
 					log.debug("SKIP FAST " + location + ": " + distance);
 					return false;
 				}
